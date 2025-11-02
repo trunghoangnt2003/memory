@@ -48,10 +48,18 @@ export class GalleryService {
     captions?: string[]
   ): Promise<{ success: boolean; data?: GalleryImage[]; error?: string }> {
     try {
+      console.log(`Starting upload of ${files.length} images...`);
+      
       // Upload all images
       const imageUrls = await GalleryModel.uploadMultipleImages(files);
+      console.log(`Uploaded ${imageUrls.length} images successfully:`, imageUrls);
+      
       if (imageUrls.length === 0) {
         return { success: false, error: 'Failed to upload images' };
+      }
+
+      if (imageUrls.length !== files.length) {
+        console.warn(`Warning: Only ${imageUrls.length} out of ${files.length} images uploaded`);
       }
 
       // Create gallery entries
@@ -64,6 +72,8 @@ export class GalleryService {
 
       const results = await Promise.all(createPromises);
       const successfulResults = results.filter((r): r is GalleryImage => r !== null);
+
+      console.log(`Created ${successfulResults.length} database entries`);
 
       if (successfulResults.length === 0) {
         return { success: false, error: 'Failed to add images to gallery' };

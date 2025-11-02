@@ -9,6 +9,7 @@ export default function UploadGallery() {
   const [captions, setCaptions] = useState<{ [key: number]: string }>({});
   const [loading, setLoading] = useState(false);
   const [previews, setPreviews] = useState<string[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<string>('');
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -33,25 +34,32 @@ export default function UploadGallery() {
     }
 
     setLoading(true);
+    setUploadProgress(`Đang upload ${images.length} ảnh...`);
 
     try {
       // Convert captions object to array
       const captionsArray = images.map((_, index) => captions[index] || '');
 
       // Upload all images using GalleryService
+      setUploadProgress(`Đang xử lý ${images.length} ảnh...`);
       const result = await GalleryService.addMultipleImages(images, captionsArray);
 
       if (result.success) {
-        alert(`Đã upload thành công ${result.data?.length || images.length} ảnh! 🎉`);
-        setImages([]);
-        setCaptions({});
-        setPreviews([]);
-        window.location.href = '/gallery';
+        setUploadProgress(`Hoàn thành! Đã upload ${result.data?.length || images.length} ảnh 🎉`);
+        setTimeout(() => {
+          setImages([]);
+          setCaptions({});
+          setPreviews([]);
+          setUploadProgress('');
+          window.location.href = '/gallery';
+        }, 1500);
       } else {
+        setUploadProgress('');
         alert(`Lỗi: ${result.error}`);
       }
     } catch (error) {
       console.error('Error uploading images:', error);
+      setUploadProgress('');
       alert('Có lỗi xảy ra. Vui lòng thử lại.');
     } finally {
       setLoading(false);
@@ -138,23 +146,30 @@ export default function UploadGallery() {
 
           {/* Submit Button */}
           {previews.length > 0 && (
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white py-4 rounded-lg font-semibold hover:from-pink-600 hover:to-rose-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
-            >
-              {loading ? (
-                <>
-                  <Loader className="w-5 h-5 animate-spin" />
-                  Đang upload...
-                </>
-              ) : (
-                <>
-                  <Heart className="w-5 h-5" />
-                  Upload {previews.length} ảnh
-                </>
+            <div className="space-y-3">
+              {uploadProgress && (
+                <div className="bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-200 rounded-lg p-4 text-center animate-fade-in">
+                  <p className="text-pink-600 font-medium">{uploadProgress}</p>
+                </div>
               )}
-            </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white py-4 rounded-lg font-semibold hover:from-pink-600 hover:to-rose-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+              >
+                {loading ? (
+                  <>
+                    <Loader className="w-5 h-5 animate-spin" />
+                    Đang upload...
+                  </>
+                ) : (
+                  <>
+                    <Heart className="w-5 h-5" />
+                    Upload {previews.length} ảnh
+                  </>
+                )}
+              </button>
+            </div>
           )}
         </form>
 

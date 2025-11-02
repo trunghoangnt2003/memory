@@ -1,6 +1,7 @@
 // Model: Gallery
 import { supabase, TABLES } from '@/lib/supabase';
 import type { GalleryImage } from '@/types';
+import { v4 as uuidv4 } from 'uuid';
 
 export class GalleryModel {
   // Get all images
@@ -94,12 +95,16 @@ export class GalleryModel {
   static async uploadImage(file: File): Promise<string | null> {
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `gallery_${Date.now()}.${fileExt}`;
+      const uniqueId = uuidv4();
+      const fileName = `gallery_${uniqueId}.${fileExt}`;
       const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('gallery-images')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
       if (uploadError) throw uploadError;
 
@@ -114,10 +119,35 @@ export class GalleryModel {
     }
   }
 
-  // Upload multiple images
+  // Upload multiple images in parallel
   static async uploadMultipleImages(files: File[]): Promise<string[]> {
     try {
-      const uploadPromises = files.map(file => this.uploadImage(file));
+      // Upload all files in parallel with UUID names
+      const uploadPromises = files.map(async (file) => {
+        const fileExt = file.name.split('.').pop();
+        const uniqueId = uuidv4(); // Guaranteed unique ID
+        const fileName = `gallery_${uniqueId}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('gallery-images')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false // Don't overwrite if file exists
+          });
+
+        if (uploadError) {
+          console.error(`Error uploading ${file.name}:`, uploadError);
+          return null;
+        }
+
+        const { data } = supabase.storage
+          .from('gallery-images')
+          .getPublicUrl(filePath);
+
+        return data.publicUrl;
+      });
+
       const results = await Promise.all(uploadPromises);
       return results.filter((url): url is string => url !== null);
     } catch (error) {
