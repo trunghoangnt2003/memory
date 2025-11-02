@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -26,6 +26,18 @@ interface MapViewProps {
   onMapClick?: (lat: number, lng: number) => void;
 }
 
+// Component to handle map clicks
+function MapClickHandler({ onMapClick }: { onMapClick?: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click: (e) => {
+      if (onMapClick) {
+        onMapClick(e.latlng.lat, e.latlng.lng);
+      }
+    },
+  });
+  return null;
+}
+
 export default function MapView({ center, markers = [], zoom = 13, onMapClick }: MapViewProps) {
   useEffect(() => {
     // Fix for marker icon paths
@@ -42,16 +54,12 @@ export default function MapView({ center, markers = [], zoom = 13, onMapClick }:
       center={center}
       zoom={zoom}
       style={{ height: '100%', width: '100%' }}
-      onClick={(e) => {
-        if (onMapClick) {
-          onMapClick(e.latlng.lat, e.latlng.lng);
-        }
-      }}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      <MapClickHandler onMapClick={onMapClick} />
       {markers.map((marker, index) => (
         <Marker key={index} position={marker.position} icon={icon}>
           {marker.popup && (
